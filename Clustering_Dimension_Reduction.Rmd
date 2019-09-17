@@ -26,7 +26,7 @@ library(fastICA)
 
 ```{r}
 # read in Auto data
-Auto_data <- read_csv("/Users/ay1392/Desktop/Auto.csv")
+Auto_data <- read_csv("/Users/bree/desktop/Machine_Learning/Homework/hw1-BriannaRoseberry/Auto.csv")
 
 #remove cars with unknown horsepower and set horsepower to numeric
 Auto_data <- Auto_data %>% 
@@ -269,25 +269,122 @@ heatmap(a$S)
 
 ```{r}
 data(iris)
+iris
 ```
 
 0. Subset the Iris dataset to only include `Sepal.Length`, `Sepal.Width`, `Petal.Length`, and `Petal.Width`. 
 
+```{r}
+iris <- iris[c(-5)]
+iris
+```
+
 1. Write out the Kmeans algorithm by hand, and run two iterations of it. 
+```{r}
+#Step 1
+set.seed(100)
+SL = runif(3,range(iris$Sepal.Length)[1], range(iris$Sepal.Length)[2])
+set.seed(230)
+SW = runif(3,range(iris$Sepal.Width)[1], range(iris$Sepal.Width)[2])
+set.seed(444)
+PL = runif(3,range(iris$Petal.Length)[1], range(iris$Petal.Length)[2])
+set.seed(111)
+PW = runif(3,range(iris$Petal.Width)[1], range(iris$Petal.Width)[2])
+centroid=matrix(1:12, nrow = 3)
+for(i in 1:3){centroid[i,]=c(SL[i], SW[i], PL[i], PW[i])}
+print(centroid)
+
+#Step 2
+#bind=as.data.frame(cbind(iris$Sepal.Length,iris$Sepal.Width,iris$Petal.Length,iris$Petal.Width))
+distSqr=function(x, y){return(sum((x-y)^2))}
+
+dist=rep(NA, 3)
+assign=rep(NA, 150) -> reassign
+
+for(i in 1:150){
+  for(j in 1:3){
+    dist[j]=distSqr(iris[i,],(centroid[j,]))
+  }
+  assign[i]=which.min(dist)
+}
+
+#Step 3
+for(i in 1:3){
+  centroid[i,1]=mean(iris$Sepal.Length[which(assign==i)])
+  centroid[i,2]=mean(iris$Sepal.Width[which(assign==i)])
+  centroid[i,3]=mean(iris$Petal.Length[which(assign==i)])
+  centroid[i,4]=mean(iris$Petal.Width[which(assign==i)])
+}
+
+print(centroid)
+
+#Step 4
+for(i in 1:150){
+  for(j in 1:3){
+    dist[j]=distSqr(iris[i,],(centroid[j,]))
+  }
+  reassign[i]=which.min(dist)
+}
+```
 
 2. Run PCA on the Iris dataset. Plot a scatter plot of PC1 vs PC2 and include the percent variance those PCs describe. 
+```{r}
+autoplot(prcomp(iris))
+```
 
 3. Run ICA on the Iris dataset. Plot the independent components as a heatmap.
+```{r}
+a <- fastICA(iris, 4, alg.typ = "parallel", fun = "logcosh", alpha = 1,
+             method = "R", row.norm = FALSE, maxit = 200,
+             tol = 0.0001, verbose = TRUE)
+heatmap(a$S)
+```
 
 4. Use Kmeans to cluster the Iris data. 
   * Use the silhouette function in the cluster package to find the optimal number of clusters for kmeans for the iris dataset. Then cluster using kmeans clustering. Does the data cluster by species? 
   * Using this clustering, color the PCA plot according to the clusters.
+```{r}
+library(cluster)
+Score <- function(k){
+  km <- kmeans(iris, centers = k, nstart=25)
+  ss <- silhouette(km$cluster, dist(iris))
+  mean(ss[, 3])
+}
+k <- 2:10
+averageSil <- sapply(k, Score)
+plot(k, type='b', averageSil, xlab='Number of clusters', ylab='Average Silhouette Scores', frame=FALSE)
+#optimal number of clusters = 2
+#Does not cluster by species
+
+KM <- kmeans(iris, centers = 2, nstart = 25)
+KM
+autoplot(prcomp(iris), col = KM$cluster)
+```
   
 5. Use hierarchical clustering to cluster the Iris data.
 
   * Try two different linkage types, and two different distance metrics. 
   * For one linkage type and one distance metric, try two different cut points. 
   * Using this clustering, color the PCA plot according to the clusters. (6  plots in total)
+```{r}
+hier_dist <- dist(iris)
+euc_dist <- dist(iris, method = "euclidean")
+man_dist <- dist(iris, method = "manhattan")
+
+tree1 <- hclust(hier_dist, method="single")
+tree2 <- hclust(hier_dist, method = "centroid")
+tree3 <- hclust(euc_dist)
+tree4 <- hclust(man_dist)
+cutPoint3 <- cutree(tree1, k = 3)
+cutPoint5 <- cutree(tree3, k = 5)
+
+plot(tree1)
+plot(tree2)
+plot(tree3)
+plot(tree4)
+autoplot(prcomp(iris), col = cutPoint3)
+autoplot(prcomp(iris), col = cutPoint5)
+```
   
 
 # Optional material
